@@ -1,15 +1,3 @@
-#Location: /Users/tam/Desktop/ClinVarDiscrepancy/ClinVarReports/ExpertPanelIndividualUpdateReports.py
-#Must run as >python3 EP_test.py
-#This script takes the most recent submission_summary.txt file from the ClinVar FTP site and outputs an Excel file
-#(with the last modfified date of the FTP file) of all the variants for each EP than needs updating/reviewing.
-#1. Alert: an LP or VUS with DateLastEvaluated older than 2 years.
-#2. Alert: a new submission (DateLastEvaluatedup to 1 year prior) with a medically-significant clinsig EP=P/LP, NewSub=VUS/LB/B)
-#3. Alert: a new submission (DateLastEvaluated up to 1 year prior) EP=VUS, NewSub=LB/B
-#4. Priority: a gene in scope for the EP with discrepancy P/LP vs VUS/LB/B
-#5. Priority: a gene in scope for the EP with discrepancy VUS vs LB/B
-#6. Priority: a gene in scope for the EP with >=3 concordant VUS (not including duplicate ie Illumina submissions)
-#7. Priority: a gene in scope for the EP with >= 1 P/LP where highest level of review is 'no assertion criteria provided'
-
 from ftplib import FTP
 import datetime
 import time
@@ -104,13 +92,7 @@ def create_scvHash(gzfile):
                     clinSig = col[1]
                     rawDate = col[2]
                     dateLastEval = convert_date(rawDate) #convert date eg May 02, 2018 -> YYYYMMDD
-
-                    #description = col[3]
                     revStat = col[6]
-                    #colMeth = col[7]
-                    #rawOrigin = re.split(r':', col[8]) #split on colons
-                    #origin = rawOrigin[0]
-                    #obs = rawOrigin[1] #number/counts of observations
 
                     submitter = col[9]
                     submitter = re.sub(r'\s+', '_', submitter) #replace all spaces with an underscore
@@ -118,8 +100,6 @@ def create_scvHash(gzfile):
                     submitter = re.sub(r'\W+', '', submitter) #remove all non-alphanumerics
 
                     SCV = col[10]
-                    #explanation = col[12]
-                    #explanation = explanation.rstrip('\n\r') #remove whitespace and new lines
 
                     if revStat == 'reviewed by expert panel' and 'PharmGKB' not in submitter: #-- to exclude PharmGKB records
                         EPHash[varID] = {'ClinSig':clinSig, 'Submitter':submitter, 'DateLastEval':dateLastEval}
@@ -392,7 +372,7 @@ def create_tab4(EP, workbook, worksheet0):
         submitters = []
         ClinSigList = []
 
-        if varID not in EPHash: #and geneHash[HGVSHash[varID]['GeneSym']] in EP:
+        if varID not in EPHash:
             for SCV in scvHash[varID]:
                 submitters.append(scvHash[varID][SCV]['Submitter'])
                 ClinSigList.append(scvHash[varID][SCV]['ClinSig'])
@@ -679,7 +659,6 @@ def main():
     dir = 'ClinVarExpertPanelReports'
 
     date = get_file(inputFile1)
-    #date = '12-18-2018'
     get_file(inputFile2)
     get_file(inputFile3)
 
@@ -695,51 +674,3 @@ def main():
     create_EPfiles(ExcelDir, excelFile, date)
 
 main()
-
-
-#scvHash
-#eg
-# '378630': {'SCV000514720.4': {'ClinSig': 'Benign',
-#                               'ColMethod': 'clinical testing',
-#                               'DateLastEval': '20161020',
-#                               'Description': 'This variant is considered '
-#                                              'likely benign or benign based '
-#                                              'on one or more of the following '
-#                                              'criteria: it is a conservative '
-#                                              'change, it occurs at a poorly '
-#                                              'conserved position in the '
-#                                              'protein, it is predicted to be '
-#                                              'benign by multiple in silico '
-#                                              'algorithms, and/or has '
-#                                              'population frequency not '
-#                                              'consistent with disease.',
-#                               'Explanation': '-',
-#                               'Observations': 'na',
-#                               'Origin': 'germline',
-#                               'ReviewStatus': 'criteria provided, single '
-#                                               'submitter',
-#                               'Submitter': 'GeneDx'},
-#            'SCV000627699.2': {'ClinSig': 'Benign',
-#                               'ColMethod': 'clinical testing',
-#                               'DateLastEval': '20171108',
-#                               'Description': '-',
-#                               'Explanation': '-',
-#                               'Observations': 'na',
-#                               'Origin': 'germline',
-#                               'ReviewStatus': 'criteria provided, single '
-#                                               'submitter',
-#                               'Submitter': 'Invitae,'}},
-
-#HGVSHash
-#eg
-# '230869': {'GeneSym': 'MSH6',
-#            'Guidelines': 'ACMG2013,ACMG2016',
-#            'HGVSname': 'NM_000179.2(MSH6):c.1870G>A (p.Gly624Ser)',
-#            'Phenotype': 'Hereditary cancer-predisposing syndrome;Hereditary '
-#                         'nonpolyposis colon cancer;Hereditary nonpolyposis '
-#                         'colorectal cancer type 5;not provided;not specified',
-#            'VarType': 'single nucleotide variant'},
-
-#a2vHash
-#eg
-# '54322': '76654'
