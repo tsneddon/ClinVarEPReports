@@ -185,6 +185,7 @@ def create_geneList(file):
                 col = re.split(r'\t', line) #split on tabs
                 if not col[0] == '': #ignore empty lines
                     geneSym = col[0]
+                    geneSym = re.sub(r'\s+', '', geneSym)
                     EPname = col[1]
                     EPname = re.sub(r'\W+', '', EPname) #remove all non-alphanumerics
                     geneHash[geneSym] = EPname
