@@ -212,13 +212,14 @@ def create_EPfiles(ExcelDir, excelFile, date):
         worksheet0.write(6, 0, '#Variants:')
         worksheet0.write(7, 1, '1. Alert: ClinVar variants with an LP/VUS Expert Panel SCV with a DateLastEvaluated > 2 years from the date of this file.')
         worksheet0.write(8, 1, '2. Alert: ClinVar variants with a P/LP Expert Panel SCV AND a newer VUS/LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
-        worksheet0.write(9, 1, '3. Alert: ClinVar variants with a VUS Expert Panel SCV AND a newer LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
-        worksheet0.write(10, 1, '4. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV and at least one VUS/LB/B SCV (medically-significant conflict).')
-        worksheet0.write(11, 1, '5. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one VUS SCV and at least one LB/B SCV.')
-        worksheet0.write(12, 1, '6. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with >=3 concordant VUS SCVs from different submitters.')
-        worksheet0.write(13, 1, '7. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV from (at best) a no assertion criteria provided submitter.')
+        worksheet0.write(9, 1, '3. Alert: ClinVar variants with a VUS Expert Panel SCV AND a newer P/LP non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
+        worksheet0.write(10, 1, '4. Alert: ClinVar variants with a VUS Expert Panel SCV AND a newer LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
+        worksheet0.write(11, 1, '5. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV and at least one VUS/LB/B SCV (medically-significant conflict).')
+        worksheet0.write(12, 1, '6. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one VUS SCV and at least one LB/B SCV.')
+        worksheet0.write(13, 1, '7. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with >=3 concordant VUS SCVs from different submitters.')
+        worksheet0.write(14, 1, '8. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV from (at best) a no assertion criteria provided submitter.')
 
-        tabList = [create_tab1, create_tab2, create_tab3, create_tab4, create_tab5, create_tab6, create_tab7]
+        tabList = [create_tab1, create_tab2, create_tab3, create_tab4, create_tab5, create_tab6, create_tab7, create_tab8]
 
         for tab in tabList:
             tab(EP, workbook, worksheet0)
@@ -312,15 +313,14 @@ def create_tab2(EP, workbook, worksheet0):
 
     print_stats(worksheet0, 8, 0, row)
 
-
 def create_tab3(EP, workbook, worksheet0):
-    '''This function creates the Tab#3 Alert (EP_VUSvsNewSub_LBB) in the Excel file'''
+    '''This function creates the Tab#3 Alert (EP_VUSvsNewSub_PLP) in the Excel file'''
 
     row = 0
     p2fileVarIDs = []
     headerSubs = []
 
-    worksheet3 = workbook.add_worksheet('3.Alert_EP_VUSvsNewSub_LBB')
+    worksheet3 = workbook.add_worksheet('3.Alert_EP_VUSvsNewSub_PLP')
 
     for varID in EPHash:
         if varID in EPHash and EPHash[varID]['Submitter'] == EP and EPHash[varID]['DateLastEval'] != '-':
@@ -330,7 +330,7 @@ def create_tab3(EP, workbook, worksheet0):
                     (int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) or \
                     int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) - 10000) and \
                     ((EPHash[varID]['ClinSig'] == 'Uncertain significance') and \
-                    (scvHash[varID][SCV]['ClinSig'] == 'Likely benign' or scvHash[varID][SCV]['ClinSig'] == 'Benign')):
+                    (scvHash[varID][SCV]['ClinSig'] == 'Likely pathogenic' or scvHash[varID][SCV]['ClinSig'] == 'Pathogenic')):
                         headerSubs.append(scvHash[varID][SCV]['Submitter'])
                         if varID not in p2fileVarIDs:
                             p2fileVarIDs.append(varID)
@@ -347,7 +347,7 @@ def create_tab3(EP, workbook, worksheet0):
                    (int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) or \
                    int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) - 10000) and \
                    ((EPHash[varID]['ClinSig'] == 'Uncertain significance') and \
-                   (scvHash[varID][SCV]['ClinSig'] == 'Likely benign' or scvHash[varID][SCV]['ClinSig'] == 'Benign')):
+                   (scvHash[varID][SCV]['ClinSig'] == 'Likely pathogenic' or scvHash[varID][SCV]['ClinSig'] == 'Pathogenic')):
                     #Convert date from YYYYMMDD -> MM/DD/YYYY
                     subPrintDate = print_date(scvHash[varID][SCV]['DateLastEval'])
                     varSubs.append(scvHash[varID][SCV]['Submitter'] + ' (' + scvHash[varID][SCV]['ClinSig'] + ', ' + subPrintDate + ')')
@@ -360,13 +360,59 @@ def create_tab3(EP, workbook, worksheet0):
 
 
 def create_tab4(EP, workbook, worksheet0):
-    '''This function creates the Tab#4 Priority (PLPvsVUSLBB)in the Excel file'''
+    '''This function creates the Tab#4 Alert (EP_VUSvsNewSub_LBB) in the Excel file'''
 
     row = 0
     p2fileVarIDs = []
     headerSubs = []
 
-    worksheet4 = workbook.add_worksheet('4.Priority_PLPvsVUSLBB')
+    worksheet4 = workbook.add_worksheet('4.Alert_EP_VUSvsNewSub_LBB')
+
+    for varID in EPHash:
+        if varID in EPHash and EPHash[varID]['Submitter'] == EP and EPHash[varID]['DateLastEval'] != '-':
+            if varID in scvHash:
+                for SCV in scvHash[varID]:
+                    if scvHash[varID][SCV]['DateLastEval'] != '-' and \
+                    (int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) or \
+                    int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) - 10000) and \
+                    ((EPHash[varID]['ClinSig'] == 'Uncertain significance') and \
+                    (scvHash[varID][SCV]['ClinSig'] == 'Likely benign' or scvHash[varID][SCV]['ClinSig'] == 'Benign')):
+                        headerSubs.append(scvHash[varID][SCV]['Submitter'])
+                        if varID not in p2fileVarIDs:
+                            p2fileVarIDs.append(varID)
+
+    headerSubs = sorted(set(headerSubs))
+
+    i = print_header(p2fileVarIDs, headerSubs, worksheet4, 5, 'Newer')
+
+    for varID in p2fileVarIDs:
+        varSubs = []
+        if varID in scvHash:
+            for SCV in scvHash[varID]:
+                if scvHash[varID][SCV]['DateLastEval'] != '-' and \
+                   (int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) or \
+                   int(scvHash[varID][SCV]['DateLastEval']) > int(EPHash[varID]['DateLastEval']) - 10000) and \
+                   ((EPHash[varID]['ClinSig'] == 'Uncertain significance') and \
+                   (scvHash[varID][SCV]['ClinSig'] == 'Likely benign' or scvHash[varID][SCV]['ClinSig'] == 'Benign')):
+                    #Convert date from YYYYMMDD -> MM/DD/YYYY
+                    subPrintDate = print_date(scvHash[varID][SCV]['DateLastEval'])
+                    varSubs.append(scvHash[varID][SCV]['Submitter'] + ' (' + scvHash[varID][SCV]['ClinSig'] + ', ' + subPrintDate + ')')
+
+        varSubs = sorted(set(varSubs))
+
+        row, i = print_variants(worksheet4, row, varID, 5, headerSubs, varSubs, i)
+
+    print_stats(worksheet0, 10, 0, row)
+
+
+def create_tab5(EP, workbook, worksheet0):
+    '''This function creates the Tab#5 Priority (PLPvsVUSLBB)in the Excel file'''
+
+    row = 0
+    p2fileVarIDs = []
+    headerSubs = []
+
+    worksheet5 = workbook.add_worksheet('5.Priority_PLPvsVUSLBB')
 
     for varID in scvHash:
         submitters = []
@@ -382,58 +428,6 @@ def create_tab4(EP, workbook, worksheet0):
 
             if ('Pathogenic' in ClinSigList or 'Likely pathogenic' in ClinSigList) \
                 and ('Uncertain significance' in ClinSigList or 'Likely benign' in ClinSigList or 'Benign' in ClinSigList) \
-                and varID in HGVSHash and HGVSHash[varID]['GeneSym'] in geneList \
-                and geneHash[HGVSHash[varID]['GeneSym']] in EP:
-                if varID not in p2fileVarIDs:
-                    p2fileVarIDs.append(varID)
-                if submitters:
-                    headerSubs.extend(submitters)
-
-            headerSubs = sorted(set(headerSubs))
-
-    i = print_header(p2fileVarIDs, headerSubs, worksheet4, 4, 'Conflicting')
-
-    for varID in p2fileVarIDs:
-        varSubs = []
-        if varID in scvHash:
-            for SCV in scvHash[varID]:
-                if scvHash[varID][SCV]['DateLastEval'] != '-':
-                    #Convert date from YYYYMMDD -> MM/DD/YYYY
-                    subPrintDate = print_date(scvHash[varID][SCV]['DateLastEval'])
-                    varSubs.append(scvHash[varID][SCV]['Submitter'] + ' (' + scvHash[varID][SCV]['ClinSig'] + ', ' + subPrintDate + ')')
-                else:
-                    varSubs.append(scvHash[varID][SCV]['Submitter'] + ' (' + scvHash[varID][SCV]['ClinSig'] + ', No DLE)')
-
-        varSubs = sorted(set(varSubs))
-
-        row, i = print_variants(worksheet4, row, varID, 4, headerSubs, varSubs, i)
-
-    print_stats(worksheet0, 10, 0, row)
-
-
-def create_tab5(EP, workbook, worksheet0):
-    '''This function creates the Tab#5 Priority (VUSvsLBB)in the Excel file'''
-
-    row = 0
-    p2fileVarIDs = []
-    headerSubs = []
-
-    worksheet5 = workbook.add_worksheet('5.Priority_VUSvsLBB')
-
-    for varID in scvHash:
-        submitters = []
-        ClinSigList = []
-
-        if varID not in EPHash:
-            for SCV in scvHash[varID]:
-                submitters.append(scvHash[varID][SCV]['Submitter'])
-                ClinSigList.append(scvHash[varID][SCV]['ClinSig'])
-
-            submitters = sorted(set(submitters))
-            ClinSigList = sorted(set(ClinSigList))
-
-            if ('Uncertain significance' in ClinSigList) \
-                and ('Likely benign' in ClinSigList or 'Benign' in ClinSigList) \
                 and varID in HGVSHash and HGVSHash[varID]['GeneSym'] in geneList \
                 and geneHash[HGVSHash[varID]['GeneSym']] in EP:
                 if varID not in p2fileVarIDs:
@@ -464,13 +458,65 @@ def create_tab5(EP, workbook, worksheet0):
 
 
 def create_tab6(EP, workbook, worksheet0):
-    '''This function creates the Tab#6 Priority (multiVUS) in the Excel file'''
+    '''This function creates the Tab#6 Priority (VUSvsLBB)in the Excel file'''
 
     row = 0
     p2fileVarIDs = []
     headerSubs = []
 
-    worksheet6 = workbook.add_worksheet('6.Priority_multiVUS')
+    worksheet6 = workbook.add_worksheet('6.Priority_VUSvsLBB')
+
+    for varID in scvHash:
+        submitters = []
+        ClinSigList = []
+
+        if varID not in EPHash:
+            for SCV in scvHash[varID]:
+                submitters.append(scvHash[varID][SCV]['Submitter'])
+                ClinSigList.append(scvHash[varID][SCV]['ClinSig'])
+
+            submitters = sorted(set(submitters))
+            ClinSigList = sorted(set(ClinSigList))
+
+            if ('Uncertain significance' in ClinSigList) \
+                and ('Likely benign' in ClinSigList or 'Benign' in ClinSigList) \
+                and varID in HGVSHash and HGVSHash[varID]['GeneSym'] in geneList \
+                and geneHash[HGVSHash[varID]['GeneSym']] in EP:
+                if varID not in p2fileVarIDs:
+                    p2fileVarIDs.append(varID)
+                if submitters:
+                    headerSubs.extend(submitters)
+
+            headerSubs = sorted(set(headerSubs))
+
+    i = print_header(p2fileVarIDs, headerSubs, worksheet6, 4, 'Conflicting')
+
+    for varID in p2fileVarIDs:
+        varSubs = []
+        if varID in scvHash:
+            for SCV in scvHash[varID]:
+                if scvHash[varID][SCV]['DateLastEval'] != '-':
+                    #Convert date from YYYYMMDD -> MM/DD/YYYY
+                    subPrintDate = print_date(scvHash[varID][SCV]['DateLastEval'])
+                    varSubs.append(scvHash[varID][SCV]['Submitter'] + ' (' + scvHash[varID][SCV]['ClinSig'] + ', ' + subPrintDate + ')')
+                else:
+                    varSubs.append(scvHash[varID][SCV]['Submitter'] + ' (' + scvHash[varID][SCV]['ClinSig'] + ', No DLE)')
+
+        varSubs = sorted(set(varSubs))
+
+        row, i = print_variants(worksheet6, row, varID, 4, headerSubs, varSubs, i)
+
+    print_stats(worksheet0, 12, 0, row)
+
+
+def create_tab7(EP, workbook, worksheet0):
+    '''This function creates the Tab#7 Priority (multiVUS) in the Excel file'''
+
+    row = 0
+    p2fileVarIDs = []
+    headerSubs = []
+
+    worksheet7 = workbook.add_worksheet('7.Priority_multiVUS')
 
     for varID in scvHash:
         submitters = []
@@ -505,7 +551,7 @@ def create_tab6(EP, workbook, worksheet0):
 
             headerSubs = sorted(set(headerSubs))
 
-    i = print_header(p2fileVarIDs, headerSubs, worksheet6, 4, 'Consensus')
+    i = print_header(p2fileVarIDs, headerSubs, worksheet7, 4, 'Consensus')
 
     for varID in p2fileVarIDs:
         varSubs = []
@@ -520,19 +566,19 @@ def create_tab6(EP, workbook, worksheet0):
 
         varSubs = sorted(set(varSubs))
 
-        row, i = print_variants(worksheet6, row, varID, 4, headerSubs, varSubs, i)
+        row, i = print_variants(worksheet7, row, varID, 4, headerSubs, varSubs, i)
 
-    print_stats(worksheet0, 12, 0, row)
+    print_stats(worksheet0, 13, 0, row)
 
 
-def create_tab7(EP, workbook, worksheet0):
-    '''This function creates the Tab#7 Priority (noCriteriaPLP) in the Excel file'''
+def create_tab8(EP, workbook, worksheet0):
+    '''This function creates the Tab#8 Priority (noCriteriaPLP) in the Excel file'''
 
     row = 0
     p2fileVarIDs = []
     headerSubs = []
 
-    worksheet7 = workbook.add_worksheet('7.Priority_noCriteriaPLP')
+    worksheet8 = workbook.add_worksheet('8.Priority_noCriteriaPLP')
 
     for varID in scvHash:
         submitters = []
@@ -565,7 +611,7 @@ def create_tab7(EP, workbook, worksheet0):
 
             headerSubs = sorted(set(headerSubs))
 
-    i = print_header(p2fileVarIDs, headerSubs, worksheet7, 4, 'No_assertion')
+    i = print_header(p2fileVarIDs, headerSubs, worksheet8, 4, 'No_assertion')
 
     for varID in p2fileVarIDs:
         varSubs = []
@@ -580,9 +626,9 @@ def create_tab7(EP, workbook, worksheet0):
 
         varSubs = sorted(set(varSubs))
 
-        row, i = print_variants(worksheet7, row, varID, 4, headerSubs, varSubs, i)
+        row, i = print_variants(worksheet8, row, varID, 4, headerSubs, varSubs, i)
 
-    print_stats(worksheet0, 13, 0, row)
+    print_stats(worksheet0, 14, 0, row)
 
 
 def print_header(p2fileVarIDs, headerSubs, worksheet, i, type):
@@ -629,7 +675,7 @@ def print_variants(worksheet, row, varID, j, headerSubs, varSubs, i):
         p2file = 'no'
         for varSub in varSubs:
             if headerSub in varSub:
-                p2file = varSub
+                p2file = varSub[varSub.find("(")+1:varSub.find(")")]
         if p2file != 'no':
             worksheet.write(row, j, p2file)
             j += 1
