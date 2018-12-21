@@ -43,7 +43,7 @@ def get_file(file):
 def make_directory(dir, date):
     '''This function makes a local directory for new files if directory does not already exist'''
 
-    directory = dir + '/Reports_' + date + '/EP_Reports_' + date
+    directory = dir + '/EP_Reports_' + date
 
     if not os.path.exists(directory):
         os.makedirs(directory)
