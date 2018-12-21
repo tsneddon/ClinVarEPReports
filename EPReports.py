@@ -43,7 +43,7 @@ def get_file(file):
 def make_directory(dir, date):
     '''This function makes a local directory for new files if directory does not already exist'''
 
-    directory = dir + '/Reports_' + date + '/EP_Updates_Individual_' + date
+    directory = dir + '/Reports_' + date + '/EP_Reports_' + date
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -211,7 +211,7 @@ def create_EPfiles(ExcelDir, excelFile, date):
         worksheet0.write(4, 0, "This Excel file is the output of a script that takes the most recent submission_summary.txt file from the ClinVar FTP site and outputs all the variants that need updating/reviewing by the " + EP + " (EP).")
         worksheet0.write(5, 0, 'Each tab is the result of a different set of parameters as outlined below:')
         worksheet0.write(6, 0, '#Variants:')
-        worksheet0.write(7, 1, '1. Alert: ClinVar variants with an LP/VUS Expert Panel SCV with a DateLastEvaluated > 2 years from the date of this file.')
+        worksheet0.write(7, 1, '1. Alert: ClinVar variants with an LP/VUS Expert Panel SCV with a DateLastEvaluated > 2 years from the date of this file (may overlap with variants on Tabs 2, 3 and 4).')
         worksheet0.write(8, 1, '2. Alert: ClinVar variants with a P/LP Expert Panel SCV AND a newer VUS/LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
         worksheet0.write(9, 1, '3. Alert: ClinVar variants with a VUS Expert Panel SCV AND a newer P/LP non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
         worksheet0.write(10, 1, '4. Alert: ClinVar variants with a VUS Expert Panel SCV AND a newer LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
