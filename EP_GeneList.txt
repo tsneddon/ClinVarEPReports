@@ -46,4 +46,8 @@ GCK	Diabetes
 HNF1B	Diabetes
 INS	Diabetes
 KCNJ11	Diabetes
-ABCC8	Diabetes
+ABCC8 Diabetes
+HNF1A Diabetes
+KLF11 Diabetes
+PAX4  Diabetes
+BLK Diabetes
