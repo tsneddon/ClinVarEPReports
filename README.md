@@ -15,6 +15,8 @@ The scripts in this project use this file to generate the following files in the
   * \#7. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with >=3 concordant VUS SCVs from different submitters.
   * \#8. Priority: ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV from (at best) a no assertion criteria provided submitter.
 
+**EPReports.py** also generates an EPReportsStats Excel file containing the summary variant counts for each EP.
+
 ## How to run these scripts
 All scripts are run as 'python3 *filename.py*'.
 All scripts use FTP to take the most recent ClinVar FTP files as input and to output the files with the date of the FTP submission_summary.txt.gz file appended:
