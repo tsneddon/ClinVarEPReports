@@ -163,10 +163,9 @@ def create_HGVSHash(gzfile):
                     HGVSname = col[2]
                     geneSym = col[4]
                     phenotype = col[13]
-                    guidelines = col[26]
 
                     if alleleID in a2vHash:
-                        HGVSHash[a2vHash[alleleID]] = {'VarType':type, 'HGVSname':HGVSname, 'GeneSym':geneSym,'Phenotype':phenotype,'Guidelines':guidelines}
+                        HGVSHash[a2vHash[alleleID]] = {'VarType':type, 'HGVSname':HGVSname, 'GeneSym':geneSym,'Phenotype':phenotype}
 
     input.close()
     os.remove(gzfile)
@@ -195,12 +194,60 @@ def create_geneList(file):
     return(geneList, geneHash)
 
 
-def create_EPfiles(ExcelDir, excelFile, date):
-    '''This function creates an Excel file for each EP in the EPList'''
+def create_files(ExcelDir, excelFile, date, statFile):
+    '''This function creates an Excel file for the stats of each EP'''
 
     dir = ExcelDir
 
+    stat_output_file = dir + '/' + statFile
+
+    workbookStat = xlsxwriter.Workbook(stat_output_file)
+
+    worksheetStat = workbookStat.add_worksheet('README')
+    worksheetStat.write(0, 0, 'Tab#')
+    worksheetStat.write(0, 1, 'Description')
+    worksheetStat.write(1, 0, '1.Alert_EP_OutOfDate')
+    worksheetStat.write(1, 1, 'ClinVar variants with an LP/VUS Expert Panel SCV with a DateLastEvaluated > 2 years from the date of this file (may overlap with variants on Tabs 2, 3 and 4).')
+    worksheetStat.write(2, 0, '2.Alert_EP_PLPvsNewSub_VUSLBB')
+    worksheetStat.write(2, 1, 'ClinVar variants with a P/LP Expert Panel SCV AND a newer VUS/LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
+    worksheetStat.write(3, 0, '3.Alert_EP_VUSvsNewSub_PLP')
+    worksheetStat.write(3, 1, 'ClinVar variants with a VUS Expert Panel SCV AND a newer P/LP non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
+    worksheetStat.write(4, 0, '4.Alert_EP_VUSvsNewSub_LBB')
+    worksheetStat.write(4, 1, 'ClinVar variants with a VUS Expert Panel SCV AND a newer LB/B non-EP SCV (with a DateLastEvaluated up to 1 year prior of EP DateLastEvaluated).')
+    worksheetStat.write(5, 0, '5.Priority_PLPvsVUSLBB')
+    worksheetStat.write(5, 1, 'ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV and at least one VUS/LB/B SCV (medically-significant conflict).')
+    worksheetStat.write(6, 0, '6.Priority_VUSvsLBB')
+    worksheetStat.write(6, 1, 'ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one VUS SCV and at least one LB/B SCV.')
+    worksheetStat.write(7, 0, '7.Priority_multiVUS')
+    worksheetStat.write(7, 1, 'ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with >=3 concordant VUS SCVs from different submitters.')
+    worksheetStat.write(8, 0, '8.Priority_noCriteriaPLP')
+    worksheetStat.write(8, 1, 'ClinVar variants WITHOUT an Expert Panel SCV, but in a gene in scope for the EP, with at least one P/LP SCV from (at best) a no assertion criteria provided submitter.')
+
+    worksheetStat0 = workbookStat.add_worksheet('EPDiscrepancyStats')
+    worksheetStat0.write(0, 0, 'EP submitter')
+    worksheetStat0.write(0, 1, '1.Alert_EP_OutOfDate')
+    worksheetStat0.write(0, 2, '2.Alert_EP_PLPvsNewSub_VUSLBB')
+    worksheetStat0.write(0, 3, '3.Alert_EP_VUSvsNewSub_PLP')
+    worksheetStat0.write(0, 4, '4.Alert_EP_VUSvsNewSub_LBB')
+    worksheetStat0.write(0, 5, '5.Priority_PLPvsVUSLBB')
+    worksheetStat0.write(0, 6, '6.Priority_VUSvsLBB')
+    worksheetStat0.write(0, 7, '7.Priority_multiVUS')
+    worksheetStat0.write(0, 8, '8.Priority_noCriteriaPLP')
+
+    create_EPfiles(ExcelDir, excelFile, date, workbookStat, worksheetStat0)
+
+
+def create_EPfiles(ExcelDir, excelFile, date, workbookStat, worksheetStat0):
+    '''This function creates an Excel file for each EP in the EPList'''
+
+    dir = ExcelDir
+    count = 0
+
     for EP in EPList:
+
+        count += 1
+        worksheetStat0.write(count, 0, EP)
+
         EP_output_file = dir + '/' + EP + '_' + excelFile
 
         workbook = xlsxwriter.Workbook(EP_output_file)
@@ -223,12 +270,14 @@ def create_EPfiles(ExcelDir, excelFile, date):
         tabList = [create_tab1, create_tab2, create_tab3, create_tab4, create_tab5, create_tab6, create_tab7, create_tab8]
 
         for tab in tabList:
-            tab(EP, workbook, worksheet0)
+            tab(EP, workbook, worksheet0, worksheetStat0, count)
 
         workbook.close()
 
+    workbookStat.close()
 
-def create_tab1(EP, workbook, worksheet0):
+
+def create_tab1(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#1 Alert (EP_OutOfDate) in the Excel file'''
 
     row = 0
@@ -266,9 +315,10 @@ def create_tab1(EP, workbook, worksheet0):
         row, i = print_variants(worksheet1, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 7, 0, row)
+    print_stats2file(worksheetStat0, count, 1, row)
 
 
-def create_tab2(EP, workbook, worksheet0):
+def create_tab2(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#2 Alert (EP_PLPvsNewSub_VUSLBB) in the Excel file'''
 
     row = 0
@@ -313,8 +363,10 @@ def create_tab2(EP, workbook, worksheet0):
         row, i = print_variants(worksheet2, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 8, 0, row)
+    print_stats2file(worksheetStat0, count, 2, row)
 
-def create_tab3(EP, workbook, worksheet0):
+
+def create_tab3(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#3 Alert (EP_VUSvsNewSub_PLP) in the Excel file'''
 
     row = 0
@@ -358,9 +410,10 @@ def create_tab3(EP, workbook, worksheet0):
         row, i = print_variants(worksheet3, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 9, 0, row)
+    print_stats2file(worksheetStat0, count, 3, row)
 
 
-def create_tab4(EP, workbook, worksheet0):
+def create_tab4(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#4 Alert (EP_VUSvsNewSub_LBB) in the Excel file'''
 
     row = 0
@@ -404,9 +457,10 @@ def create_tab4(EP, workbook, worksheet0):
         row, i = print_variants(worksheet4, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 10, 0, row)
+    print_stats2file(worksheetStat0, count, 4, row)
 
 
-def create_tab5(EP, workbook, worksheet0):
+def create_tab5(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#5 Priority (PLPvsVUSLBB)in the Excel file'''
 
     row = 0
@@ -456,9 +510,10 @@ def create_tab5(EP, workbook, worksheet0):
         row, i = print_variants(worksheet5, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 11, 0, row)
+    print_stats2file(worksheetStat0, count, 5, row)
 
 
-def create_tab6(EP, workbook, worksheet0):
+def create_tab6(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#6 Priority (VUSvsLBB)in the Excel file'''
 
     row = 0
@@ -508,9 +563,10 @@ def create_tab6(EP, workbook, worksheet0):
         row, i = print_variants(worksheet6, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 12, 0, row)
+    print_stats2file(worksheetStat0, count, 6, row)
 
 
-def create_tab7(EP, workbook, worksheet0):
+def create_tab7(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#7 Priority (multiVUS) in the Excel file'''
 
     row = 0
@@ -522,7 +578,7 @@ def create_tab7(EP, workbook, worksheet0):
     for varID in scvHash:
         submitters = []
         ClinSigList = []
-        count = 0
+        counter = 0
 
         if varID not in EPHash:
             unique_subs = []
@@ -535,12 +591,12 @@ def create_tab7(EP, workbook, worksheet0):
                 if current_sub not in unique_subs \
                    and scvHash[varID][SCV]['ClinSig'] == 'Uncertain significance':
                     unique_subs.append(current_sub)
-                    count += 1
+                    counter += 1
 
             submitters = sorted(set(submitters))
             ClinSigList = sorted(set(ClinSigList))
 
-            if count > 2 and varID in HGVSHash\
+            if counter > 2 and varID in HGVSHash\
                and 'Pathogenic' not in ClinSigList and 'Likely pathogenic' not in ClinSigList \
                and 'Likely benign' not in ClinSigList and 'Benign' not in ClinSigList \
                and HGVSHash[varID]['GeneSym'] in geneList \
@@ -570,9 +626,10 @@ def create_tab7(EP, workbook, worksheet0):
         row, i = print_variants(worksheet7, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 13, 0, row)
+    print_stats2file(worksheetStat0, count, 7, row)
 
 
-def create_tab8(EP, workbook, worksheet0):
+def create_tab8(EP, workbook, worksheet0, worksheetStat0, count):
     '''This function creates the Tab#8 Priority (noCriteriaPLP) in the Excel file'''
 
     row = 0
@@ -630,6 +687,7 @@ def create_tab8(EP, workbook, worksheet0):
         row, i = print_variants(worksheet8, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 14, 0, row)
+    print_stats2file(worksheetStat0, count, 8, row)
 
 
 def print_header(p2fileVarIDs, headerSubs, worksheet, i, type):
@@ -696,6 +754,12 @@ def print_stats(worksheet0, line, column, row):
     worksheet0.write(line, column, row)
 
 
+def print_stats2file(worksheetStat0, count, column, row):
+    '''This function prints the total variant counts to the Stats file'''
+
+    worksheetStat0.write(count, column, row)
+
+
 def main():
 
     inputFile1 = 'submission_summary.txt.gz'
@@ -713,11 +777,13 @@ def main():
 
     excelFile = 'EP_Updates_' + date + '.xlsx'
 
+    statFile = '_EPReportsStats_' + date + '.xlsx'
+
     create_scvHash(inputFile1)
     create_a2vHash(inputFile2)
     create_HGVSHash(inputFile3)
     create_geneList(geneFile)
 
-    create_EPfiles(ExcelDir, excelFile, date)
+    create_files(ExcelDir, excelFile, date, statFile)
 
 main()
