@@ -114,7 +114,7 @@ def create_scvHash(gzfile):
                         scvHash[varID][SCV] = {'ClinSig':clinSig, 'DateLastEval':dateLastEval, 'Submitter':submitter, 'ReviewStatus':revStat}
 
     #Add VCEPs that are not yet approved and have no variants in ClinVar
-    EPList.append('Monogenic_Diabetes')
+    EPList.extend(['Monogenic_Diabetes', 'Brain_Malformations', 'FH', 'KCNQ1', 'FBN1','TP53', 'Myeloid_Malignancy', 'HBOPC', 'VHL', 'LSD', 'Rett_Angelman_like_Disorders', 'Platelet_Disorders'])
 
     input.close()
     os.remove(gzfile)
@@ -288,7 +288,7 @@ def create_tab1(EP, workbook, worksheet0, worksheetStat0, count):
 
     for varID in EPHash:
         if EPHash[varID]['Submitter'] == EP and EPHash[varID]['DateLastEval'] != '-' and \
-           int(EPHash[varID]['DateLastEval']) < (int(today) - 30000) and \
+           int(EPHash[varID]['DateLastEval']) < (int(today) - 20000) and \
            (EPHash[varID]['ClinSig'] == 'Likely pathogenic' or EPHash[varID]['ClinSig'] == 'Uncertain significance'):
             p2fileVarIDs.append(varID)
             if varID in scvHash:
