@@ -1,3 +1,4 @@
+import xml.etree.ElementTree as ET
 from ftplib import FTP
 import datetime
 import time
@@ -9,21 +10,21 @@ import re
 import pprint
 import xlsxwriter
 
+orgDict = {}
 scvHash = {}
 a2vHash = {}
 HGVSHash = {}
 EPHash = {}
-EPList = []
+EPList = {}
 geneHash = {}
 geneList = []
 today = datetime.datetime.today().strftime('%Y%m%d') #todays date YYYYMMDD
 
 
-def get_file(file):
+def get_file(file, path):
     '''This function gets ClinVar files from FTP'''
 
     domain = 'ftp.ncbi.nih.gov'
-    path = '/pub/clinvar/tab_delimited/'
     user = 'anonymous'
     password = 'tsneddon@broadinstitute.org'
 
@@ -76,6 +77,28 @@ def print_date(date):
     return(printDate)
 
 
+def create_orgDict(gzfile):
+    '''This function makes a dictionary from the ClinVar production XML'''
+
+    with gzip.open(gzfile) as input:
+        for event, elem in ET.iterparse(input):
+
+            if elem.tag == 'ClinVarSet':
+                for ClinAss in elem.iter(tag='ClinVarAssertion'):
+                    for ClinAcc in ClinAss.iter(tag='ClinVarAccession'):
+                        orgID = int(ClinAcc.attrib['OrgID'])
+                        accession = ClinAcc.attrib['Acc']
+
+                        if accession not in orgDict:
+                            orgDict[accession] = orgID
+
+                elem.clear()
+
+    input.close()
+    os.remove(gzfile)
+    return(orgDict)
+
+
 def create_scvHash(gzfile):
     '''This function makes a hash of each SCV in each VarID'''
 
@@ -95,17 +118,24 @@ def create_scvHash(gzfile):
                     revStat = col[6]
 
                     submitter = col[9]
-                    submitter = re.sub(r'\s+', '_', submitter) #replace all spaces with an underscore
-                    submitter = re.sub(r'/', '-', submitter) # replace all slashes with a hyphen
-                    submitter = re.sub(r'\W+', '', submitter) #remove all non-alphanumerics
+                    submitter = submitter.rstrip()
+                    submitter = re.sub('[^0-9a-zA-Z]+', '_', submitter)
+
+                    submitter = submitter[0:45]
 
                     SCV = col[10]
+                    accession = col[10].split('.', 1)[0]
+
+                    if accession in orgDict:
+                        orgID = orgDict[accession]
+                    else:
+                        orgID = 'None'
 
                     if revStat == 'reviewed by expert panel' and 'PharmGKB' not in submitter: #-- to exclude PharmGKB records
                         EPHash[varID] = {'ClinSig':clinSig, 'Submitter':submitter, 'DateLastEval':dateLastEval}
 
                         if submitter not in EPList:
-                            EPList.append(submitter)
+                            EPList[submitter] = orgID
 
                     else:
                         if varID not in scvHash.keys():
@@ -114,7 +144,9 @@ def create_scvHash(gzfile):
                         scvHash[varID][SCV] = {'ClinSig':clinSig, 'DateLastEval':dateLastEval, 'Submitter':submitter, 'ReviewStatus':revStat}
 
     #Add VCEPs that are not yet approved and have no variants in ClinVar
-    EPList.extend(['Monogenic_Diabetes', 'Brain_Malformations', 'FH', 'KCNQ1', 'FBN1','TP53', 'Myeloid_Malignancy', 'HBOPC', 'VHL', 'LSD', 'Rett_Angelman_like_Disorders', 'Platelet_Disorders'])
+    new = ['Monogenic_Diabetes', 'Brain_Malformations', 'FH', 'KCNQ1', 'FBN1','TP53', 'Myeloid_Malignancy', 'HBOPC', 'VHL', 'LSD', 'Rett_Angelman_like_Disorders', 'Platelet_Disorders', 'Chondrodysplasia_punctata', 'Craniosynostosis']
+    for i in new:
+        EPList[i] = 'None'
 
     input.close()
     os.remove(gzfile)
@@ -225,14 +257,15 @@ def create_files(ExcelDir, excelFile, date, statFile):
 
     worksheetStat0 = workbookStat.add_worksheet('EPDiscrepancyStats')
     worksheetStat0.write(0, 0, 'EP submitter')
-    worksheetStat0.write(0, 1, '1.Alert_EP_OutOfDate')
-    worksheetStat0.write(0, 2, '2.Alert_EP_PLPvsNewSub_VUSLBB')
-    worksheetStat0.write(0, 3, '3.Alert_EP_VUSvsNewSub_PLP')
-    worksheetStat0.write(0, 4, '4.Alert_EP_VUSvsNewSub_LBB')
-    worksheetStat0.write(0, 5, '5.Priority_PLPvsVUSLBB')
-    worksheetStat0.write(0, 6, '6.Priority_VUSvsLBB')
-    worksheetStat0.write(0, 7, '7.Priority_multiVUS')
-    worksheetStat0.write(0, 8, '8.Priority_noCriteriaPLP')
+    worksheetStat0.write(0, 1, 'OrgID')
+    worksheetStat0.write(0, 2, '1.Alert_EP_OutOfDate')
+    worksheetStat0.write(0, 3, '2.Alert_EP_PLPvsNewSub_VUSLBB')
+    worksheetStat0.write(0, 4, '3.Alert_EP_VUSvsNewSub_PLP')
+    worksheetStat0.write(0, 5, '4.Alert_EP_VUSvsNewSub_LBB')
+    worksheetStat0.write(0, 6, '5.Priority_PLPvsVUSLBB')
+    worksheetStat0.write(0, 7, '6.Priority_VUSvsLBB')
+    worksheetStat0.write(0, 8, '7.Priority_multiVUS')
+    worksheetStat0.write(0, 9, '8.Priority_noCriteriaPLP')
 
     create_EPfiles(ExcelDir, excelFile, date, workbookStat, worksheetStat0)
 
@@ -247,8 +280,9 @@ def create_EPfiles(ExcelDir, excelFile, date, workbookStat, worksheetStat0):
 
         count += 1
         worksheetStat0.write(count, 0, EP)
+        worksheetStat0.write(count, 1, EPList[EP])
 
-        EP_output_file = dir + '/' + EP + '_' + excelFile
+        EP_output_file = dir + '/' + EP + '[' + str(EPList[EP]) + ']_' + excelFile
 
         workbook = xlsxwriter.Workbook(EP_output_file)
         worksheet0 = workbook.add_worksheet('README')
@@ -315,7 +349,7 @@ def create_tab1(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet1, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 7, 0, row)
-    print_stats2file(worksheetStat0, count, 1, row)
+    print_stats2file(worksheetStat0, count, 2, row)
 
 
 def create_tab2(EP, workbook, worksheet0, worksheetStat0, count):
@@ -363,7 +397,7 @@ def create_tab2(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet2, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 8, 0, row)
-    print_stats2file(worksheetStat0, count, 2, row)
+    print_stats2file(worksheetStat0, count, 3, row)
 
 
 def create_tab3(EP, workbook, worksheet0, worksheetStat0, count):
@@ -410,7 +444,7 @@ def create_tab3(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet3, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 9, 0, row)
-    print_stats2file(worksheetStat0, count, 3, row)
+    print_stats2file(worksheetStat0, count, 4, row)
 
 
 def create_tab4(EP, workbook, worksheet0, worksheetStat0, count):
@@ -457,7 +491,7 @@ def create_tab4(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet4, row, varID, 5, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 10, 0, row)
-    print_stats2file(worksheetStat0, count, 4, row)
+    print_stats2file(worksheetStat0, count, 5, row)
 
 
 def create_tab5(EP, workbook, worksheet0, worksheetStat0, count):
@@ -510,7 +544,7 @@ def create_tab5(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet5, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 11, 0, row)
-    print_stats2file(worksheetStat0, count, 5, row)
+    print_stats2file(worksheetStat0, count, 6, row)
 
 
 def create_tab6(EP, workbook, worksheet0, worksheetStat0, count):
@@ -563,7 +597,7 @@ def create_tab6(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet6, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 12, 0, row)
-    print_stats2file(worksheetStat0, count, 6, row)
+    print_stats2file(worksheetStat0, count, 7, row)
 
 
 def create_tab7(EP, workbook, worksheet0, worksheetStat0, count):
@@ -626,7 +660,7 @@ def create_tab7(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet7, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 13, 0, row)
-    print_stats2file(worksheetStat0, count, 7, row)
+    print_stats2file(worksheetStat0, count, 8, row)
 
 
 def create_tab8(EP, workbook, worksheet0, worksheetStat0, count):
@@ -687,7 +721,7 @@ def create_tab8(EP, workbook, worksheet0, worksheetStat0, count):
         row, i = print_variants(worksheet8, row, varID, 4, headerSubs, varSubs, i)
 
     print_stats(worksheet0, 14, 0, row)
-    print_stats2file(worksheetStat0, count, 8, row)
+    print_stats2file(worksheetStat0, count, 9, row)
 
 
 def print_header(p2fileVarIDs, headerSubs, worksheet, i, type):
@@ -733,7 +767,9 @@ def print_variants(worksheet, row, varID, j, headerSubs, varSubs, i):
     for headerSub in headerSubs:
         p2file = 'no'
         for varSub in varSubs:
-            if headerSub in varSub:
+            varSubList = varSub.split(' (')
+            varSubStr = varSubList[0]
+            if headerSub == varSubStr:
                 p2file = varSub[varSub.find("(")+1:varSub.find(")")]
         if p2file != 'no':
             worksheet.write(row, j, p2file)
@@ -762,16 +798,18 @@ def print_stats2file(worksheetStat0, count, column, row):
 
 def main():
 
-    inputFile1 = 'submission_summary.txt.gz'
-    inputFile2 = 'variation_allele.txt.gz'
-    inputFile3 = 'variant_summary.txt.gz'
+    inputFile1 = 'ClinVarFullRelease_00-latest.xml.gz'
+    inputFile2 = 'submission_summary.txt.gz'
+    inputFile3 = 'variation_allele.txt.gz'
+    inputFile4 = 'variant_summary.txt.gz'
     geneFile = 'EP_GeneList.txt'
 
     dir = 'ClinVarExpertPanelReports'
 
-    date = get_file(inputFile1)
-    get_file(inputFile2)
-    get_file(inputFile3)
+    get_file(inputFile1, 'pub/clinvar/xml/')
+    date = get_file(inputFile2, '/pub/clinvar/tab_delimited/')
+    get_file(inputFile3, '/pub/clinvar/tab_delimited/')
+    get_file(inputFile4, '/pub/clinvar/tab_delimited/')
 
     ExcelDir = make_directory(dir, date)
 
@@ -779,9 +817,10 @@ def main():
 
     statFile = '_EPReportsStats_' + date + '.xlsx'
 
-    create_scvHash(inputFile1)
-    create_a2vHash(inputFile2)
-    create_HGVSHash(inputFile3)
+    create_orgDict(inputFile1)
+    create_scvHash(inputFile2)
+    create_a2vHash(inputFile3)
+    create_HGVSHash(inputFile4)
     create_geneList(geneFile)
 
     create_files(ExcelDir, excelFile, date, statFile)
