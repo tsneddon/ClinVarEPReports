@@ -83,11 +83,11 @@ def create_orgDict(gzfile):
     with gzip.open(gzfile) as input:
         for event, elem in ET.iterparse(input):
 
-            if elem.tag == 'ClinVarSet':
-                for ClinAss in elem.iter(tag='ClinVarAssertion'):
+            if elem.tag == 'VariationArchive':
+                for ClinAss in elem.iter(tag='ClinicalAssertion'):
                     for ClinAcc in ClinAss.iter(tag='ClinVarAccession'):
                         orgID = int(ClinAcc.attrib['OrgID'])
-                        accession = ClinAcc.attrib['Acc']
+                        accession = ClinAcc.attrib['Accession']
 
                         if accession not in orgDict:
                             orgDict[accession] = orgID
@@ -798,7 +798,7 @@ def print_stats2file(worksheetStat0, count, column, row):
 
 def main():
 
-    inputFile1 = 'ClinVarFullRelease_00-latest.xml.gz'
+    inputFile1 = 'ClinVarVariationRelease_00-latest.xml.gz'
     inputFile2 = 'submission_summary.txt.gz'
     inputFile3 = 'variation_allele.txt.gz'
     inputFile4 = 'variant_summary.txt.gz'
@@ -806,7 +806,7 @@ def main():
 
     dir = 'ClinVarExpertPanelReports'
 
-    get_file(inputFile1, 'pub/clinvar/xml/')
+    get_file(inputFile1, '/pub/clinvar/xml/clinvar_variation/')
     date = get_file(inputFile2, '/pub/clinvar/tab_delimited/')
     get_file(inputFile3, '/pub/clinvar/tab_delimited/')
     get_file(inputFile4, '/pub/clinvar/tab_delimited/')
